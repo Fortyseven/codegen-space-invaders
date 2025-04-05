@@ -1,9 +1,40 @@
+// Define constants
+const CANVAS_WIDTH = 320;
+const CANVAS_HEIGHT = 240;
+const PLAYER_WIDTH = Math.floor(20 * 0.85);
+const PLAYER_HEIGHT = Math.floor(20 * 0.85);
+const PLAYER_Y_OFFSET = 10;
+const PROJECTILE_WIDTH = Math.floor(2 * 0.85);
+const PROJECTILE_HEIGHT = Math.floor(4 * 0.85);
+const PROJECTILE_SPEED = 450;
+const MAX_PROJECTILES = 2;
+const ENEMY_ROWS = 5;
+const ENEMY_COLS = 11;
+const ENEMY_WIDTH = Math.floor(20 * 0.85);
+const ENEMY_HEIGHT = Math.floor(20 * 0.85);
+const ENEMY_PADDING = Math.floor(10 * 0.85 * 0.85);
+const ENEMY_START_Y = Math.floor(30 * 0.85);
+const ENEMY_SPEED = 5.5;
+const ENEMY_ROTATION_SPEED = 20;
+const ENEMY_ROTATION_LIMIT = 20;
+const ALIEN_PROJECTILE_WIDTH = Math.floor(2 * 0.85);
+const ALIEN_PROJECTILE_HEIGHT = Math.floor(4 * 0.85);
+const ALIEN_PROJECTILE_SPEED = 300;
+const MAX_ALIEN_PROJECTILES = 3;
+const EXPLOSION_SCALE_SPEED = 0.65625;
+const EXPLOSION_OPACITY_SPEED = 1.3125;
+const PLAYER_SPEED = 100;
+const STAR_COUNT = 200;
+const STAR_SIZE = 2;
+const SCORE_INCREMENT = 5;
+const ENEMY_MOVE_DOWN = 10;
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 // Keep canvas size at 320x240
-canvas.width = 320;
-canvas.height = 240;
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
 
 // Move stars declaration to the top
 const stars = [];
@@ -23,15 +54,15 @@ const explosions = [];
 // Define the player spaceship
 const player = {
     x: canvas.width / 2,
-    y: canvas.height - 20 - 10,
-    width: Math.floor(20 * 0.85),
-    height: Math.floor(20 * 0.85),
+    y: canvas.height - PLAYER_HEIGHT - PLAYER_Y_OFFSET,
+    width: PLAYER_WIDTH,
+    height: PLAYER_HEIGHT,
     color: "green",
 };
 
 // Position the player spaceship at the bottom center of the canvas
 player.x = canvas.width / 2;
-player.y = canvas.height - player.height - 10;
+player.y = canvas.height - player.height - PLAYER_Y_OFFSET;
 
 // Load spaceship image
 const spaceshipImage = new Image();
@@ -73,7 +104,7 @@ function resizeCanvas() {
 
     // Regenerate stars based on new canvas size
     stars.length = 0;
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < STAR_COUNT; i++) {
         stars.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
@@ -88,7 +119,7 @@ function resizeCanvas() {
 
     // Reposition the player at the bottom center
     player.x = canvas.width / 2;
-    player.y = canvas.height - player.height - 10;
+    player.y = canvas.height - player.height - PLAYER_Y_OFFSET;
 
     drawStars();
 }
@@ -112,36 +143,35 @@ window.addEventListener("keyup", (e) => {
 
 // Restrict the number of bullets on screen to 2
 window.addEventListener("keydown", (e) => {
-    if (e.key === " " && projectiles.length < 2 && gameState === "playing") {
+    if (
+        e.key === " " &&
+        projectiles.length < MAX_PROJECTILES &&
+        gameState === "playing"
+    ) {
         projectiles.push({
             x: player.x,
             y: player.y - player.height / 2,
-            width: Math.floor(2 * 0.85),
-            height: Math.floor(4 * 0.85),
-            speed: 450, // Increased speed
+            width: PROJECTILE_WIDTH,
+            height: PROJECTILE_HEIGHT,
+            speed: PROJECTILE_SPEED,
         });
     }
 });
 
 // Initialize enemies
 function createEnemies() {
-    const rows = 5; // Changed to 5 rows
-    const cols = 11; // Changed to 11 columns
-    const enemyWidth = Math.floor(20 * 0.85); // Reduced size
-    const enemyHeight = Math.floor(20 * 0.85); // Reduced size
-    const padding = Math.floor(10 * 0.85 * 0.85); // Reduced spacing by 15%
     const startX =
-        (canvas.width - (cols * (enemyWidth + padding) - padding)) / 2;
-    const startY = Math.floor(30 * 0.85); // Adjusted starting Y position to be higher
-
+        (canvas.width -
+            (ENEMY_COLS * (ENEMY_WIDTH + ENEMY_PADDING) - ENEMY_PADDING)) /
+        2;
     enemies.length = 0; // Clear existing enemies
-    for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
+    for (let row = 0; row < ENEMY_ROWS; row++) {
+        for (let col = 0; col < ENEMY_COLS; col++) {
             enemies.push({
-                x: startX + col * (enemyWidth + padding),
-                y: startY + row * (enemyHeight + padding),
-                width: enemyWidth,
-                height: enemyHeight,
+                x: startX + col * (ENEMY_WIDTH + ENEMY_PADDING),
+                y: ENEMY_START_Y + row * (ENEMY_HEIGHT + ENEMY_PADDING),
+                width: ENEMY_WIDTH,
+                height: ENEMY_HEIGHT,
                 color: "red",
                 rotationOffset: Math.random() * 40 - 20, // Random offset between -20 and 20 degrees
             });
@@ -154,19 +184,18 @@ createEnemies();
 
 // Add variables for enemy movement
 let enemyDirection = 1; // 1 for right, -1 for left
-const enemySpeed = 5.5; // Reduced speed by 50%
 
 // Adjust enemy speed based on the number of remaining enemies
 function updateEnemies(deltaTime) {
     let shouldChangeDirection = false;
 
-    const totalEnemies = 55; // Update to reflect the new grid size
+    const totalEnemies = ENEMY_ROWS * ENEMY_COLS;
     const adjustedSpeed =
         enemies.length === 1
             ? Math.floor(
-                  enemySpeed + 5 * (totalEnemies - enemies.length) * 0.832
-              ) // Further reduced last alien speedup by another 20%
-            : Math.floor(enemySpeed + 1.25 * (totalEnemies - enemies.length)); // Reduced speed increase by 75%
+                  ENEMY_SPEED + 5 * (totalEnemies - enemies.length) * 0.832
+              )
+            : Math.floor(ENEMY_SPEED + 1.25 * (totalEnemies - enemies.length));
 
     enemies.forEach((enemy) => {
         enemy.x += enemyDirection * adjustedSpeed * (deltaTime / 1000);
@@ -194,7 +223,7 @@ function updateEnemies(deltaTime) {
     if (shouldChangeDirection) {
         enemyDirection *= -1;
         enemies.forEach((enemy) => {
-            enemy.y += 10; // Move enemies down when changing direction
+            enemy.y += ENEMY_MOVE_DOWN; // Move enemies down when changing direction
         });
         console.log(`Direction changed. Enemies moved down.`);
     }
@@ -202,16 +231,15 @@ function updateEnemies(deltaTime) {
 
 // Update rotation angle to 20 degrees
 function updateEnemyRotation(deltaTime) {
-    const rotationSpeed = 20; // Degrees per second
     enemyRotationAngle +=
-        rotationDirection * rotationSpeed * (deltaTime / 1000);
+        rotationDirection * ENEMY_ROTATION_SPEED * (deltaTime / 1000);
 
     // Reverse direction when reaching 20 degrees
-    if (enemyRotationAngle >= 20) {
-        enemyRotationAngle = 20; // Clamp to 20 degrees
+    if (enemyRotationAngle >= ENEMY_ROTATION_LIMIT) {
+        enemyRotationAngle = ENEMY_ROTATION_LIMIT; // Clamp to 20 degrees
         rotationDirection = -1; // Reverse direction
-    } else if (enemyRotationAngle <= -20) {
-        enemyRotationAngle = -20; // Clamp to -20 degrees
+    } else if (enemyRotationAngle <= -ENEMY_ROTATION_LIMIT) {
+        enemyRotationAngle = -ENEMY_ROTATION_LIMIT; // Clamp to -20 degrees
         rotationDirection = 1; // Reverse direction
     }
 }
@@ -219,7 +247,7 @@ function updateEnemyRotation(deltaTime) {
 function updateAlienProjectiles(deltaTime) {
     // Move alien projectiles downward
     alienProjectiles.forEach((projectile, index) => {
-        projectile.y += Math.floor(projectile.speed * 0.5 * (deltaTime / 1000)); // Reduced alien projectile speed
+        projectile.y += ALIEN_PROJECTILE_SPEED * 0.5 * (deltaTime / 1000); // Reduced alien projectile speed
 
         // Remove projectiles that go off-screen
         if (projectile.y > canvas.height) {
@@ -241,7 +269,7 @@ function drawAlienProjectiles() {
 }
 
 function alienShoot() {
-    if (alienProjectiles.length >= 3) return; // Limit to 3 shots on-screen
+    if (alienProjectiles.length >= MAX_ALIEN_PROJECTILES) return; // Limit to 3 shots on-screen
 
     // Find the bottom-most enemy in random columns
     const bottomEnemies = {};
@@ -257,9 +285,9 @@ function alienShoot() {
         alienProjectiles.push({
             x: shooter.x + shooter.width / 2,
             y: shooter.y + shooter.height,
-            width: Math.floor(2 * 0.85),
-            height: Math.floor(4 * 0.85),
-            speed: 300,
+            width: ALIEN_PROJECTILE_WIDTH,
+            height: ALIEN_PROJECTILE_HEIGHT,
+            speed: ALIEN_PROJECTILE_SPEED,
         });
     }
 }
@@ -267,8 +295,8 @@ function alienShoot() {
 // Update explosions
 function updateExplosions(deltaTime) {
     explosions.forEach((explosion, index) => {
-        explosion.scale += 0.65625 * (deltaTime / 1000); // Scale up 50% faster
-        explosion.opacity -= 1.3125 * (deltaTime / 1000); // Fade out 50% faster
+        explosion.scale += EXPLOSION_SCALE_SPEED * (deltaTime / 1000); // Scale up 50% faster
+        explosion.opacity -= EXPLOSION_OPACITY_SPEED * (deltaTime / 1000); // Fade out 50% faster
 
         if (explosion.opacity <= 0) {
             explosions.splice(index, 1); // Remove explosion when fully faded
@@ -329,7 +357,11 @@ function compileShader(gl, source, type) {
 }
 
 const vertexShader = compileShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
-const fragmentShader = compileShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
+const fragmentShader = compileShader(
+    gl,
+    fragmentShaderSource,
+    gl.FRAGMENT_SHADER
+);
 
 // Link program
 const program = gl.createProgram();
@@ -350,12 +382,7 @@ const opacityLocation = gl.getUniformLocation(program, "u_opacity");
 // Create buffer for positions
 const positionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-const positions = [
-    -1, -1,
-    1, -1,
-    -1, 1,
-    1, 1,
-];
+const positions = [-1, -1, 1, -1, -1, 1, 1, 1];
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
 gl.enableVertexAttribArray(positionLocation);
@@ -364,12 +391,7 @@ gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 // Create buffer for texture coordinates
 const texCoordBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-const texCoords = [
-    0, 0,
-    1, 0,
-    0, 1,
-    1, 1,
-];
+const texCoords = [0, 0, 1, 0, 0, 1, 1, 1];
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
 
 gl.enableVertexAttribArray(texCoordLocation);
@@ -388,14 +410,7 @@ function drawExplosionWithShader(explosion, image) {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        image
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
     gl.uniform1f(opacityLocation, explosion.opacity); // Ensure opacity is passed to the shader
 
@@ -406,10 +421,14 @@ function drawExplosionWithShader(explosion, image) {
     const scaleY = (explosion.height * explosion.scale) / canvas.height;
 
     const positions = [
-        x - scaleX, y - scaleY,
-        x + scaleX, y - scaleY,
-        x - scaleX, y + scaleY,
-        x + scaleX, y + scaleY,
+        x - scaleX,
+        y - scaleY,
+        x + scaleX,
+        y - scaleY,
+        x - scaleX,
+        y + scaleY,
+        x + scaleX,
+        y + scaleY,
     ];
 
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -526,7 +545,7 @@ function drawStars() {
 
     stars.forEach((star) => {
         ctx.fillStyle = star.color;
-        ctx.fillRect(star.x, star.y, 2, 2);
+        ctx.fillRect(star.x, star.y, STAR_SIZE, STAR_SIZE);
     });
 }
 
@@ -542,24 +561,22 @@ function drawPlayer() {
 }
 
 function updatePlayer(deltaTime) {
-    const speed = 100; // Reduced player speed
-
     if (keys["ArrowLeft"] && player.x - player.width / 2 > 0) {
-        player.x -= Math.floor(speed * (deltaTime / 1000));
+        player.x -= PLAYER_SPEED * (deltaTime / 1000);
     }
     if (keys["ArrowRight"] && player.x + player.width / 2 < canvas.width) {
-        player.x += Math.floor(speed * (deltaTime / 1000));
+        player.x += PLAYER_SPEED * (deltaTime / 1000);
     }
 }
 
 function updateProjectiles(deltaTime) {
     // Move projectiles upward
     projectiles.forEach((projectile, index) => {
-        projectile.y -= Math.floor(projectile.speed * 0.5 * (deltaTime / 1000)); // Reduced projectile speed
+        projectile.y -= PROJECTILE_SPEED * 0.5 * (deltaTime / 1000); // Reduced projectile speed
 
         // Update projectile dimensions
-        projectile.width = Math.floor(2 * 0.85);
-        projectile.height = Math.floor(4 * 0.85);
+        projectile.width = PROJECTILE_WIDTH;
+        projectile.height = PROJECTILE_HEIGHT;
 
         // Remove projectiles that go off-screen
         if (projectile.y + projectile.height < 0) {
@@ -622,15 +639,15 @@ function checkCollisions() {
                 projectiles.splice(pIndex, 1);
 
                 // Increase score by 5 points
-                score += 5;
+                score += SCORE_INCREMENT;
             }
         });
     });
 
     alienProjectiles.forEach((projectile, pIndex) => {
         // Update alien projectile dimensions
-        projectile.width = Math.floor(2 * 0.85);
-        projectile.height = Math.floor(4 * 0.85);
+        projectile.width = ALIEN_PROJECTILE_WIDTH;
+        projectile.height = ALIEN_PROJECTILE_HEIGHT;
 
         if (
             projectile.x > player.x - player.width / 2 &&
