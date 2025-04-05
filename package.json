@@ -1,0 +1,17 @@
+{
+  "name": "my-vite-project",
+  "version": "1.0.0",
+  "description": "A blank HTML/JS project using Vite",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "vite": "^6.2.5"
+  }
+}
