@@ -1,3 +1,5 @@
+import { initializeStars, drawStars } from "./stars.js";
+
 // Define constants
 const CANVAS_WIDTH = 640;
 const CANVAS_HEIGHT = 480;
@@ -36,28 +38,8 @@ const ctx = canvas.getContext("2d");
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
-// Move stars declaration to the top
-const stars = [];
-
-// Initialize stars array
-for (let i = 0; i < STAR_COUNT; i++) {
-    stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        color:
-            Math.random() < 0.8
-                ? "white"
-                : Math.random() < 0.5
-                ? "red"
-                : "blue",
-        speed: Math.random() * 2.3 + 3,
-    });
-}
-
-// Update star colors to ensure visibility
-for (let i = 0; i < STAR_COUNT; i++) {
-    stars[i].color = "white"; // Set all stars to white for better visibility
-}
+// Initialize stars
+initializeStars(canvas, STAR_COUNT);
 
 // Add projectiles array
 const projectiles = [];
@@ -129,26 +111,13 @@ function resizeCanvas() {
     canvas.style.transformOrigin = "top left";
 
     // Regenerate stars based on new canvas size
-    stars.length = 0;
-    for (let i = 0; i < STAR_COUNT; i++) {
-        stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            color:
-                Math.random() < 0.8
-                    ? "white"
-                    : Math.random() < 0.5
-                    ? "red"
-                    : "blue",
-            speed: Math.random() * 2.3 + 1.15, // Increased speed range by 15%
-        });
-    }
+    initializeStars(canvas, STAR_COUNT);
 
     // Reposition the player at the bottom center
     player.x = canvas.width / 2;
     player.y = canvas.height - player.height - PLAYER_Y_OFFSET;
 
-    drawStars();
+    drawStars(ctx, canvas, 0); // Pass 0 as deltaTime for initial draw
 }
 
 // Add event listener for window resize
@@ -538,10 +507,10 @@ function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === "title") {
-        drawStars(deltaTime); // Ensure stars are drawn on the title screen
+        drawStars(ctx, canvas, deltaTime); // Ensure stars are drawn on the title screen
         drawTitleScreen();
     } else if (gameState === "playing") {
-        drawStars(deltaTime); // Ensure stars are drawn during gameplay
+        drawStars(ctx, canvas, deltaTime); // Ensure stars are drawn during gameplay
         updatePlayer(deltaTime);
         updateProjectiles(deltaTime);
         updateEnemies(deltaTime); // Update enemies movement
@@ -565,35 +534,11 @@ function gameLoop(timestamp) {
             gameState = "gameOver";
         }
     } else if (gameState === "gameOver") {
-        drawStars(deltaTime); // Ensure stars are drawn on the game over screen
+        drawStars(ctx, canvas, deltaTime); // Ensure stars are drawn on the game over screen
         drawGameOverScreen();
     }
 
     requestAnimationFrame(gameLoop);
-}
-
-// Ensure the background is always black
-function drawStars(deltaTime) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    if (isNaN(deltaTime) || deltaTime === undefined) {
-        console.error("Invalid deltaTime detected: ", deltaTime);
-        return;
-    }
-
-    stars.forEach((star) => {
-        star.y += star.speed * (deltaTime / 150); // Move stars at their individual speeds
-
-        // Loop stars back to the top when they go off-screen
-        if (star.y > canvas.height) {
-            star.y = 0;
-            star.x = Math.random() * canvas.width;
-        }
-
-        ctx.fillStyle = star.color;
-        ctx.fillRect(star.x, star.y, STAR_SIZE, STAR_SIZE);
-    });
 }
 
 // Draw the player spaceship
