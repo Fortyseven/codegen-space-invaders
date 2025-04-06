@@ -1,43 +1,63 @@
 // Define constants
-const CANVAS_WIDTH = 320;
-const CANVAS_HEIGHT = 240;
-const PLAYER_WIDTH = Math.floor(20 * 0.85);
-const PLAYER_HEIGHT = Math.floor(20 * 0.85);
-const PLAYER_Y_OFFSET = 10;
-const PROJECTILE_WIDTH = Math.floor(2 * 0.85);
-const PROJECTILE_HEIGHT = Math.floor(4 * 0.85);
-const PROJECTILE_SPEED = 450;
+const CANVAS_WIDTH = 640;
+const CANVAS_HEIGHT = 480;
+const PLAYER_WIDTH = Math.floor(40 * 0.85);
+const PLAYER_HEIGHT = Math.floor(40 * 0.85);
+const PLAYER_Y_OFFSET = 20;
+const PROJECTILE_WIDTH = Math.floor(4 * 0.85);
+const PROJECTILE_HEIGHT = Math.floor(8 * 0.85);
+const PROJECTILE_SPEED = 900;
 const MAX_PROJECTILES = 2;
 const ENEMY_ROWS = 5;
 const ENEMY_COLS = 11;
-const ENEMY_WIDTH = Math.floor(20 * 0.85);
-const ENEMY_HEIGHT = Math.floor(20 * 0.85);
-const ENEMY_PADDING = Math.floor(10 * 0.85 * 0.85);
-const ENEMY_START_Y = Math.floor(30 * 0.85);
-const ENEMY_SPEED = 5.5;
-const ENEMY_ROTATION_SPEED = 20;
+const ENEMY_WIDTH = Math.floor(40 * 0.85);
+const ENEMY_HEIGHT = Math.floor(40 * 0.85);
+const ENEMY_PADDING = Math.floor(20 * 0.85 * 0.85);
+const ENEMY_START_Y = Math.floor(60 * 0.85);
+const ENEMY_SPEED = 11;
+const ENEMY_ROTATION_SPEED = 40;
 const ENEMY_ROTATION_LIMIT = 20;
-const ALIEN_PROJECTILE_WIDTH = Math.floor(2 * 0.85);
-const ALIEN_PROJECTILE_HEIGHT = Math.floor(4 * 0.85);
-const ALIEN_PROJECTILE_SPEED = 300;
+const ALIEN_PROJECTILE_WIDTH = Math.floor(4 * 0.85);
+const ALIEN_PROJECTILE_HEIGHT = Math.floor(8 * 0.85);
+const ALIEN_PROJECTILE_SPEED = 600;
 const MAX_ALIEN_PROJECTILES = 3;
-const EXPLOSION_SCALE_SPEED = 0.65625;
-const EXPLOSION_OPACITY_SPEED = 1.3125;
-const PLAYER_SPEED = 100;
-const STAR_COUNT = 200;
-const STAR_SIZE = 2;
+const EXPLOSION_SCALE_SPEED = 1.3125;
+const EXPLOSION_OPACITY_SPEED = 2.625;
+const PLAYER_SPEED = 200;
+const STAR_COUNT = 400;
+const STAR_SIZE = 1;
 const SCORE_INCREMENT = 5;
-const ENEMY_MOVE_DOWN = 10;
+const ENEMY_MOVE_DOWN = 20;
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Keep canvas size at 320x240
+// Keep canvas size at 640x480
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
 // Move stars declaration to the top
 const stars = [];
+
+// Initialize stars array
+for (let i = 0; i < STAR_COUNT; i++) {
+    stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        color:
+            Math.random() < 0.8
+                ? "white"
+                : Math.random() < 0.5
+                ? "red"
+                : "blue",
+        speed: Math.random() * 2.3 + 3,
+    });
+}
+
+// Update star colors to ensure visibility
+for (let i = 0; i < STAR_COUNT; i++) {
+    stars[i].color = "white"; // Set all stars to white for better visibility
+}
 
 // Add projectiles array
 const projectiles = [];
@@ -66,7 +86,14 @@ player.y = canvas.height - player.height - PLAYER_Y_OFFSET;
 
 // Load spaceship image
 const spaceshipImage = new Image();
-spaceshipImage.src = "./assets/spaceship.png";
+spaceshipImage.src = "assets/spaceship.png";
+
+// Ensure the spaceship image is fully loaded before drawing
+spaceshipImage.onload = () => {};
+
+spaceshipImage.onerror = () => {
+    console.error("Failed to load spaceship image.");
+};
 
 // Load enemy image
 const enemyImage = new Image();
@@ -89,7 +116,6 @@ let isPaused = false;
 window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
         isPaused = !isPaused;
-        console.log(`Game ${isPaused ? "paused" : "resumed"}`);
     }
 });
 
@@ -114,6 +140,7 @@ function resizeCanvas() {
                     : Math.random() < 0.5
                     ? "red"
                     : "blue",
+            speed: Math.random() * 2.3 + 1.15, // Increased speed range by 15%
         });
     }
 
@@ -225,7 +252,14 @@ function updateEnemies(deltaTime) {
         enemies.forEach((enemy) => {
             enemy.y += ENEMY_MOVE_DOWN; // Move enemies down when changing direction
         });
-        console.log(`Direction changed. Enemies moved down.`);
+    }
+
+    // Reset all enemies when defeated
+    if (enemies.length === 0) {
+        setTimeout(() => {
+            createEnemies(); // Reset all enemies
+            enemyDirection = 1; // Reset enemy direction
+        }, 1000); // Wait 1,000 milliseconds before resetting
     }
 }
 
@@ -504,10 +538,10 @@ function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === "title") {
-        drawStars();
+        drawStars(deltaTime); // Ensure stars are drawn on the title screen
         drawTitleScreen();
     } else if (gameState === "playing") {
-        drawStars();
+        drawStars(deltaTime); // Ensure stars are drawn during gameplay
         updatePlayer(deltaTime);
         updateProjectiles(deltaTime);
         updateEnemies(deltaTime); // Update enemies movement
@@ -531,7 +565,7 @@ function gameLoop(timestamp) {
             gameState = "gameOver";
         }
     } else if (gameState === "gameOver") {
-        drawStars();
+        drawStars(deltaTime); // Ensure stars are drawn on the game over screen
         drawGameOverScreen();
     }
 
@@ -539,11 +573,24 @@ function gameLoop(timestamp) {
 }
 
 // Ensure the background is always black
-function drawStars() {
+function drawStars(deltaTime) {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    if (isNaN(deltaTime) || deltaTime === undefined) {
+        console.error("Invalid deltaTime detected: ", deltaTime);
+        return;
+    }
+
     stars.forEach((star) => {
+        star.y += star.speed * (deltaTime / 150); // Move stars at their individual speeds
+
+        // Loop stars back to the top when they go off-screen
+        if (star.y > canvas.height) {
+            star.y = 0;
+            star.x = Math.random() * canvas.width;
+        }
+
         ctx.fillStyle = star.color;
         ctx.fillRect(star.x, star.y, STAR_SIZE, STAR_SIZE);
     });
