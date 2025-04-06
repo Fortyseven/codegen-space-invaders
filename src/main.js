@@ -1,51 +1,19 @@
 import { initializeStars, drawStars } from "./stars.js";
-
-// Define constants
-const CANVAS_WIDTH = 640;
-const CANVAS_HEIGHT = 480;
-const PLAYER_WIDTH = Math.floor(40 * 0.85);
-const PLAYER_HEIGHT = Math.floor(40 * 0.85);
-const PLAYER_Y_OFFSET = 20;
-const PROJECTILE_WIDTH = Math.floor(4 * 0.85);
-const PROJECTILE_HEIGHT = Math.floor(8 * 0.85);
-const PROJECTILE_SPEED = 900;
-const MAX_PROJECTILES = 2;
-const ENEMY_ROWS = 5;
-const ENEMY_COLS = 11;
-const ENEMY_WIDTH = Math.floor(40 * 0.85);
-const ENEMY_HEIGHT = Math.floor(40 * 0.85);
-const ENEMY_PADDING = Math.floor(20 * 0.85 * 0.85);
-const ENEMY_START_Y = Math.floor(60 * 0.85);
-const ENEMY_SPEED = 11;
-const ENEMY_ROTATION_SPEED = 40;
-const ENEMY_ROTATION_LIMIT = 20;
-const ALIEN_PROJECTILE_WIDTH = Math.floor(4 * 0.85);
-const ALIEN_PROJECTILE_HEIGHT = Math.floor(8 * 0.85);
-const ALIEN_PROJECTILE_SPEED = 600;
-const MAX_ALIEN_PROJECTILES = 3;
-const EXPLOSION_SCALE_SPEED = 1.3125;
-const EXPLOSION_OPACITY_SPEED = 2.625;
-const PLAYER_SPEED = 200;
-const STAR_COUNT = 400;
-const STAR_SIZE = 1;
-const SCORE_INCREMENT = 5;
-const ENEMY_MOVE_DOWN = 20;
+import { enemies, createEnemies, updateEnemies } from "./enemies.js";
+import * as constants from "./constants.js";
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 // Keep canvas size at 640x480
-canvas.width = CANVAS_WIDTH;
-canvas.height = CANVAS_HEIGHT;
+canvas.width = constants.CANVAS_WIDTH;
+canvas.height = constants.CANVAS_HEIGHT;
 
 // Initialize stars
-initializeStars(canvas, STAR_COUNT);
+initializeStars(canvas, constants.STAR_COUNT);
 
 // Add projectiles array
 const projectiles = [];
-
-// Add enemies array
-const enemies = [];
 
 // Add alien projectiles array
 const alienProjectiles = [];
@@ -56,15 +24,15 @@ const explosions = [];
 // Define the player spaceship
 const player = {
     x: canvas.width / 2,
-    y: canvas.height - PLAYER_HEIGHT - PLAYER_Y_OFFSET,
-    width: PLAYER_WIDTH,
-    height: PLAYER_HEIGHT,
+    y: canvas.height - constants.PLAYER_HEIGHT - constants.PLAYER_Y_OFFSET,
+    width: constants.PLAYER_WIDTH,
+    height: constants.PLAYER_HEIGHT,
     color: "green",
 };
 
 // Position the player spaceship at the bottom center of the canvas
 player.x = canvas.width / 2;
-player.y = canvas.height - player.height - PLAYER_Y_OFFSET;
+player.y = canvas.height - player.height - constants.PLAYER_Y_OFFSET;
 
 // Load spaceship image
 const spaceshipImage = new Image();
@@ -111,11 +79,11 @@ function resizeCanvas() {
     canvas.style.transformOrigin = "top left";
 
     // Regenerate stars based on new canvas size
-    initializeStars(canvas, STAR_COUNT);
+    initializeStars(canvas, constants.STAR_COUNT);
 
     // Reposition the player at the bottom center
     player.x = canvas.width / 2;
-    player.y = canvas.height - player.height - PLAYER_Y_OFFSET;
+    player.y = canvas.height - player.height - constants.PLAYER_Y_OFFSET;
 
     drawStars(ctx, canvas, 0); // Pass 0 as deltaTime for initial draw
 }
@@ -141,108 +109,44 @@ window.addEventListener("keyup", (e) => {
 window.addEventListener("keydown", (e) => {
     if (
         e.key === " " &&
-        projectiles.length < MAX_PROJECTILES &&
+        projectiles.length < constants.MAX_PROJECTILES &&
         gameState === "playing"
     ) {
         projectiles.push({
             x: player.x,
             y: player.y - player.height / 2,
-            width: PROJECTILE_WIDTH,
-            height: PROJECTILE_HEIGHT,
-            speed: PROJECTILE_SPEED,
+            width: constants.PROJECTILE_WIDTH,
+            height: constants.PROJECTILE_HEIGHT,
+            speed: constants.PROJECTILE_SPEED,
         });
     }
 });
 
 // Initialize enemies
-function createEnemies() {
-    const startX =
-        (canvas.width -
-            (ENEMY_COLS * (ENEMY_WIDTH + ENEMY_PADDING) - ENEMY_PADDING)) /
-        2;
-    enemies.length = 0; // Clear existing enemies
-    for (let row = 0; row < ENEMY_ROWS; row++) {
-        for (let col = 0; col < ENEMY_COLS; col++) {
-            enemies.push({
-                x: startX + col * (ENEMY_WIDTH + ENEMY_PADDING),
-                y: ENEMY_START_Y + row * (ENEMY_HEIGHT + ENEMY_PADDING),
-                width: ENEMY_WIDTH,
-                height: ENEMY_HEIGHT,
-                color: "red",
-                rotationOffset: Math.random() * 40 - 20, // Random offset between -20 and 20 degrees
-            });
-        }
-    }
-}
-
-// Call createEnemies to initialize enemies
-createEnemies();
+createEnemies(
+    canvas,
+    constants.ENEMY_ROWS,
+    constants.ENEMY_COLS,
+    constants.ENEMY_WIDTH,
+    constants.ENEMY_HEIGHT,
+    constants.ENEMY_PADDING,
+    constants.ENEMY_START_Y
+);
 
 // Add variables for enemy movement
 let enemyDirection = 1; // 1 for right, -1 for left
 
-// Adjust enemy speed based on the number of remaining enemies
-function updateEnemies(deltaTime) {
-    let shouldChangeDirection = false;
-
-    const totalEnemies = ENEMY_ROWS * ENEMY_COLS;
-    const adjustedSpeed =
-        enemies.length === 1
-            ? Math.floor(
-                  ENEMY_SPEED + 5 * (totalEnemies - enemies.length) * 0.832
-              )
-            : Math.floor(ENEMY_SPEED + 1.25 * (totalEnemies - enemies.length));
-
-    enemies.forEach((enemy) => {
-        enemy.x += enemyDirection * adjustedSpeed * (deltaTime / 1000);
-
-        // Check if any enemy hits the wall
-        if (enemy.x <= 0 || enemy.x + enemy.width >= canvas.width) {
-            shouldChangeDirection = true;
-        }
-
-        if (enemy.x + enemy.width >= canvas.width) {
-            enemy.x = canvas.width - enemy.width - 1;
-        }
-
-        if (enemy.x <= 0) {
-            enemy.x = 1;
-        }
-
-        // Check if any enemy reaches the bottom row
-        if (enemy.y + enemy.height >= canvas.height) {
-            gameState = "gameOver"; // Trigger game over
-        }
-    });
-
-    // Change direction if needed
-    if (shouldChangeDirection) {
-        enemyDirection *= -1;
-        enemies.forEach((enemy) => {
-            enemy.y += ENEMY_MOVE_DOWN; // Move enemies down when changing direction
-        });
-    }
-
-    // Reset all enemies when defeated
-    if (enemies.length === 0) {
-        setTimeout(() => {
-            createEnemies(); // Reset all enemies
-            enemyDirection = 1; // Reset enemy direction
-        }, 1000); // Wait 1,000 milliseconds before resetting
-    }
-}
-
 // Update rotation angle to 20 degrees
 function updateEnemyRotation(deltaTime) {
     enemyRotationAngle +=
-        rotationDirection * ENEMY_ROTATION_SPEED * (deltaTime / 1000);
+        rotationDirection * constants.ENEMY_ROTATION_SPEED * (deltaTime / 1000);
 
     // Reverse direction when reaching 20 degrees
-    if (enemyRotationAngle >= ENEMY_ROTATION_LIMIT) {
-        enemyRotationAngle = ENEMY_ROTATION_LIMIT; // Clamp to 20 degrees
+    if (enemyRotationAngle >= constants.ENEMY_ROTATION_LIMIT) {
+        enemyRotationAngle = constants.ENEMY_ROTATION_LIMIT; // Clamp to 20 degrees
         rotationDirection = -1; // Reverse direction
-    } else if (enemyRotationAngle <= -ENEMY_ROTATION_LIMIT) {
-        enemyRotationAngle = -ENEMY_ROTATION_LIMIT; // Clamp to -20 degrees
+    } else if (enemyRotationAngle <= -constants.ENEMY_ROTATION_LIMIT) {
+        enemyRotationAngle = -constants.ENEMY_ROTATION_LIMIT; // Clamp to -20 degrees
         rotationDirection = 1; // Reverse direction
     }
 }
@@ -250,7 +154,8 @@ function updateEnemyRotation(deltaTime) {
 function updateAlienProjectiles(deltaTime) {
     // Move alien projectiles downward
     alienProjectiles.forEach((projectile, index) => {
-        projectile.y += ALIEN_PROJECTILE_SPEED * 0.5 * (deltaTime / 1000); // Reduced alien projectile speed
+        projectile.y +=
+            constants.ALIEN_PROJECTILE_SPEED * 0.5 * (deltaTime / 1000); // Reduced alien projectile speed
 
         // Remove projectiles that go off-screen
         if (projectile.y > canvas.height) {
@@ -272,7 +177,7 @@ function drawAlienProjectiles() {
 }
 
 function alienShoot() {
-    if (alienProjectiles.length >= MAX_ALIEN_PROJECTILES) return; // Limit to 3 shots on-screen
+    if (alienProjectiles.length >= constants.MAX_ALIEN_PROJECTILES) return; // Limit to 3 shots on-screen
 
     // Find the bottom-most enemy in random columns
     const bottomEnemies = {};
@@ -288,9 +193,9 @@ function alienShoot() {
         alienProjectiles.push({
             x: shooter.x + shooter.width / 2,
             y: shooter.y + shooter.height,
-            width: ALIEN_PROJECTILE_WIDTH,
-            height: ALIEN_PROJECTILE_HEIGHT,
-            speed: ALIEN_PROJECTILE_SPEED,
+            width: constants.ALIEN_PROJECTILE_WIDTH,
+            height: constants.ALIEN_PROJECTILE_HEIGHT,
+            speed: constants.ALIEN_PROJECTILE_SPEED,
         });
     }
 }
@@ -298,8 +203,9 @@ function alienShoot() {
 // Update explosions
 function updateExplosions(deltaTime) {
     explosions.forEach((explosion, index) => {
-        explosion.scale += EXPLOSION_SCALE_SPEED * (deltaTime / 1000); // Scale up 50% faster
-        explosion.opacity -= EXPLOSION_OPACITY_SPEED * (deltaTime / 1000); // Fade out 50% faster
+        explosion.scale += constants.EXPLOSION_SCALE_SPEED * (deltaTime / 1000); // Scale up 50% faster
+        explosion.opacity -=
+            constants.EXPLOSION_OPACITY_SPEED * (deltaTime / 1000); // Fade out 50% faster
 
         if (explosion.opacity <= 0) {
             explosions.splice(index, 1); // Remove explosion when fully faded
@@ -485,9 +391,16 @@ window.addEventListener("keydown", (e) => {
         gameState = "playing";
         score = 0;
         lives = 3;
-        enemies.length = 0;
         alienProjectiles.length = 0;
-        createEnemies();
+        createEnemies(
+            canvas,
+            constants.ENEMY_ROWS,
+            constants.ENEMY_COLS,
+            constants.ENEMY_WIDTH,
+            constants.ENEMY_HEIGHT,
+            constants.ENEMY_PADDING,
+            constants.ENEMY_START_Y
+        );
     } else if (e.key === " " && gameState === "gameOver") {
         gameState = "title";
     }
@@ -513,7 +426,14 @@ function gameLoop(timestamp) {
         drawStars(ctx, canvas, deltaTime); // Ensure stars are drawn during gameplay
         updatePlayer(deltaTime);
         updateProjectiles(deltaTime);
-        updateEnemies(deltaTime); // Update enemies movement
+        updateEnemies(
+            deltaTime,
+            canvas,
+            enemyDirection,
+            (dir) => (enemyDirection = dir), // Pass a valid function to setEnemyDirection
+            gameState,
+            (state) => (gameState = state)
+        ); // Update enemies movement
         updateAlienProjectiles(deltaTime); // Update alien projectiles
         updateEnemyRotation(deltaTime); // Update enemy rotation
         updateExplosions(deltaTime); // Update explosions
@@ -554,21 +474,21 @@ function drawPlayer() {
 
 function updatePlayer(deltaTime) {
     if (keys["ArrowLeft"] && player.x - player.width / 2 > 0) {
-        player.x -= PLAYER_SPEED * (deltaTime / 1000);
+        player.x -= constants.PLAYER_SPEED * (deltaTime / 1000);
     }
     if (keys["ArrowRight"] && player.x + player.width / 2 < canvas.width) {
-        player.x += PLAYER_SPEED * (deltaTime / 1000);
+        player.x += constants.PLAYER_SPEED * (deltaTime / 1000);
     }
 }
 
 function updateProjectiles(deltaTime) {
     // Move projectiles upward
     projectiles.forEach((projectile, index) => {
-        projectile.y -= PROJECTILE_SPEED * 0.5 * (deltaTime / 1000); // Reduced projectile speed
+        projectile.y -= constants.PROJECTILE_SPEED * 0.5 * (deltaTime / 1000); // Reduced projectile speed
 
         // Update projectile dimensions
-        projectile.width = PROJECTILE_WIDTH;
-        projectile.height = PROJECTILE_HEIGHT;
+        projectile.width = constants.PROJECTILE_WIDTH;
+        projectile.height = constants.PROJECTILE_HEIGHT;
 
         // Remove projectiles that go off-screen
         if (projectile.y + projectile.height < 0) {
@@ -631,15 +551,15 @@ function checkCollisions() {
                 projectiles.splice(pIndex, 1);
 
                 // Increase score by 5 points
-                score += SCORE_INCREMENT;
+                score += constants.SCORE_INCREMENT;
             }
         });
     });
 
     alienProjectiles.forEach((projectile, pIndex) => {
         // Update alien projectile dimensions
-        projectile.width = ALIEN_PROJECTILE_WIDTH;
-        projectile.height = ALIEN_PROJECTILE_HEIGHT;
+        projectile.width = constants.ALIEN_PROJECTILE_WIDTH;
+        projectile.height = constants.ALIEN_PROJECTILE_HEIGHT;
 
         if (
             projectile.x > player.x - player.width / 2 &&
